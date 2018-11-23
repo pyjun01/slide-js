@@ -2,7 +2,7 @@
 
 간단한 슬라이드 플러그인.
 
-- [Demo](https://pyjun01.github.io/slider)
+- [Demo](https://pyjun01.github.io/slider/)
 
 ## Main
 
