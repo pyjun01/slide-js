@@ -7,7 +7,7 @@
 
 	<title>test</title>
 	<style>
-		html,body {margin:0;width:100vw;height:100vh;display:flex;justify-content:center;align-items:center;background:#333;}
+		html,body {margin:0;width:100vw;height:100vh;display:flex;justify-content:center;align-items:center;background:#fff;}
 		canvas {background:#fff;}
 		
 		nav.btns {position:absolute;top:50%;width:100%;}
@@ -31,5 +31,33 @@
 			<li><a href="#">5</a></li>
         </ul>
     </nav>
+    <script>
+    	window.onload= function (){
+    		var option= {
+				Canvas: "#canvas",// canvas name
+				Auto: false,// auto sldie
+				Autotime: 3000,// auto slide delay
+				Slidetime: 	1000,// sliding time
+				pageBtn: ".link-list>ul>li",// page btn
+				PrevArrowBtn: ".btn-prev",// prev arrow btn
+				NextArrowBtn: ".btn-next",// next arrow btn
+				src: ["./images/index_1_180918.jpg", "./images/index_2_180918.jpg", "./images/index_3_180918.jpg", "./images/index_2_180918.jpg", "./images/index_1_180918.jpg"],//image src
+				S: 100,// clip short
+				L: 500,// clip long
+			};
+			var callback= {
+				onInit: function (){
+					console.log("SlideReady");
+				},
+				onSlideStart: function (){
+					console.log("onChangeStart");
+				},
+				onSlideChanged: function (){
+					console.log("onChangeEnd");
+				},
+			}
+	    	var slide= new Slider(option, callback);
+    	}
+    </script>
 </body>
 </html>

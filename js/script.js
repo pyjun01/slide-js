@@ -1,38 +1,33 @@
-var option= {
-	Auto: false,
-	Autotime: 1000,
-	// callback: function (){
-	// 	console.log('callback');
-	// }
-	pageBtn: true,
-	arrowBtn: false,
-	// images: imgs,
-};
-var slide= new Slider(option);//slide 선언
+function getNodeindex( elm ){//get tg.index()
+    for(c = elm.parentNode.children, i = 0; i < c.length; i++ )
+        if( c[i] == elm ) return i;
+}
 
-function Slider (option){
-	console.log(option);
+function Slider (option, callback){
 	/* options */
-	this.Auto= option.Auto? option.Auto: false;
-	this.Autotime= option.Autotime != undefined? option.Autotime: null;
-	this.callback= option.callback != undefined? option.callback: function(){};
-	this.pageBtn= option.pageBtn != undefined? option.pageBtn: false;
-	this.arrowBtn= option.arrowBtn != undefined? option.arrowBtn: false;
+	this.canvas= null;// canvas
+	this.ctx= null;// ctx
+	this.Auto= null;// auto slide
+	this.Autotime= null;// auto slide time
+	this.Slidetime= 2000;// sliding time // default= 2s
+	this.plus_value= 1;// cnt plus value // default= +1 
+	this.pageBtn= null;// page btn list
+	this.PrevArrowBtn= null;// prev btn
+	this.NextArrowBtn= null;// next btn
+	this.src= [];// slide image src
+	this.S= 150;// clip short
+	this.L= 300;// clip long
 	/* //options */
 
-	this.images;//slide iamge list
-	this.canvas;//canvas
-	this.ctx;//ctx
-	this.W;//canvas width
-	this.H;//canvas height
-	this.S= 150;//clip short
-	this.L= 300;//clip long
-	this.FPS= 60;//frame
-	this.isAnimated= false;//is animate
+	this.FPS= 60;// frame
+	this.images;// slide iamge list
+	this.W;// canvas width
+	this.H;// canvas height
+	this.isAnimated= false;// is animate
 	this.len= 0;// image length
 	this.idx= 0;// show image index
 	this.cnt= [0, 0, 0];//image slide index
-	this.timeline=[
+	this.timeline=[// x location list
 		0.00000,
        -0.00004,
        -0.00018,
@@ -517,7 +512,101 @@ function Slider (option){
 		-2799.9,
 		-2800,
 	];
+
+	this.callback= {
+		onInit: function (){},//slide ready
+		onSlideStart: function (){},//slide change start
+		onSlideChanged: function (){},//slide change end
+	}
+
+	this.Init(option, callback);
+	this.eventInit();
 }
+Slider.prototype.Init= function (option, callback){
+	/* option */
+	this.canvas= option.Canvas? document.querySelector(option.Canvas): null;// canvas
+	this.ctx= option.Canvas? this.canvas.getContext('2d'): null;// ctx
+	this.Auto= typeof option.Auto === "boolean" && option.Auto;// auto slide
+	this.Autotime= typeof option.Autotime === "number"? option.Autotime: 3000;// auto slide time
+	if(typeof option.Slidetime === 'number'){
+		this.Slidetime= option.Slidetime;// sliding time
+		this.plus_value= 2000/this.Slidetime;// cnt plus value
+	}
+	this.pageBtn= option.pageBtn != undefined? document.querySelectorAll(option.pageBtn): false;// page btn list
+	this.PrevArrowBtn= option.PrevArrowBtn != undefined? document.querySelector( option.PrevArrowBtn): null;
+	this.NextArrowBtn= option.NextArrowBtn != undefined? document.querySelector( option.NextArrowBtn): null;
+	this.src= option.src != undefined? option.src: [];// image src list
+	this.S= option.S? option.S: this.S;// clip short 
+	this.L= option.L? option.L: this.L;// clip long
+	/* //option */
+
+	/* callback */
+    if (callback.onSlideStart instanceof Function) {
+        this.callback.onSlideStart= callback.onSlideStart;
+    }
+	if (callback.onSlideChanged instanceof Function) {
+        this.callback.onSlideChanged= callback.onSlideChanged;
+    }
+    if (callback.onInit instanceof Function) {
+        this.callback.onInit= callback.onInit;
+    }
+	/* //callback */
+
+	/* image loading */
+	var nb= 0;
+	var loaded= 0;
+	var imgs= [];
+	var self= this;
+	for(var i in this.src){
+		nb++;
+		imgs[i]= new Image();
+		imgs[i].src= this.src[i];
+		imgs[i].onload= function (){
+			if(++loaded == nb){//all images onload
+				self.images=imgs;//images
+				self.W= self.canvas.width;//canvas Width
+				self.H= self.canvas.height;//canvas Height
+				self.len= self.src.length;//slide image length
+				self.thumbnail();//show first image
+				self.callback.onInit();//callback onInit
+				if(self.Auto){//if option.auto== true
+					setInterval(function (){
+						self.NextArrowBtn.click();
+					}, self.Autotime+ self.Slidetime);//autoslide
+				}
+			}
+		}
+	}
+};
+Slider.prototype.eventInit= function (){
+	var self= this;
+	this.PrevArrowBtn.addEventListener("click", function (){
+		if(self.isAnimated)
+			return false;
+		self.isAnimated= true;
+		var prev= self.idx > 0 ? self.idx - 1 : self.len -1;
+		self.callback.onSlideStart();//slide start callback
+		self.PrevImage(prev, 0, 0, 0);
+	});
+	this.NextArrowBtn.addEventListener("click", function (){
+		if(self.isAnimated)
+			return false;
+		self.isAnimated= true;
+		var next= self.idx < self.len - 1 ? self.idx + 1 : 0
+		self.callback.onSlideStart();//slide start callback;
+		self.NextImage(next, 0, 0, 0);
+	});
+	for(var Btn of this.pageBtn){
+		Btn.addEventListener("click", function (){
+			if(self.isAnimated)
+				return false;
+			self.isAnimated= true;
+			var tg= getNodeindex(this);
+			self.callback.onSlideStart();//slide start callback
+			self.MoveImage(tg, 0, 0, 0);
+		})
+	}
+};
 Slider.prototype.PrevImage= function (prev_idx ,count1= 0, count2= 0, count3= 0){
 	for(var i=0; i<9; i++){// cliping, drawing
 		var j= i%3;
@@ -527,56 +616,141 @@ Slider.prototype.PrevImage= function (prev_idx ,count1= 0, count2= 0, count3= 0)
 	    switch(j){
 	    	case 0:
 			    this.ctx.moveTo(0, 0);
-			    this.ctx.lineTo(slide.W, 0);
-			    this.ctx.lineTo(slide.W, slide.S);
-			    this.ctx.lineTo(0, slide.L);
+			    this.ctx.lineTo(this.W, 0);
+			    this.ctx.lineTo(this.W, this.S);
+			    this.ctx.lineTo(0, this.L);
 			    this.ctx.closePath();
 			    this.ctx.clip();
 			    this.ctx.drawImage(
 			    	this.images[this.idx], 
 			    	0, 0, this.images[this.idx].width, this.images[this.idx].height,//image의 위치
-			    	(slide.timeline[count1]*slide.W), 0, 1200, 857,//canvas의 위치
+			    	(this.timeline[count1]*this.W), 0, this.W, this.H,//canvas의 위치
 			    );
 			    this.ctx.drawImage(
 			    	this.images[prev_idx], 
 			    	0, 0, this.images[prev_idx].width, this.images[prev_idx].height,//image의 위치
-			    	(slide.timeline[count1]*slide.W)+slide.W, 0, 1200, 857,//canvas의 위치
+			    	(this.timeline[count1]*this.W)+this.W, 0, this.W, this.H,//canvas의 위치
 			    );
 	    		break;
 	    	case 1:
-	    		this.ctx.moveTo(0, slide.L);
-			    this.ctx.lineTo(slide.W, slide.S);
-			    this.ctx.lineTo(slide.W, slide.L+200);
-			    this.ctx.lineTo(0, slide.S+500);
+	    		this.ctx.moveTo(0, this.L);
+			    this.ctx.lineTo(this.W, this.S);
+			    this.ctx.lineTo(this.W, this.H - this.L);
+			    this.ctx.lineTo(0, this.H - this.S);
 			    this.ctx.closePath();
 			    this.ctx.clip();
 			    this.ctx.drawImage(
 			    	this.images[this.idx], 
 			    	0, 0, this.images[this.idx].width, this.images[this.idx].height,//image의 위치
-			    	(slide.timeline[count2]*slide.W), 0, 1200, 857,//canvas의 위치
+			    	(this.timeline[count2]*this.W), 0, this.W, this.H,//canvas의 위치
 			    );
 			    this.ctx.drawImage(
 			    	this.images[prev_idx], 
 			    	0, 0, this.images[prev_idx].width, this.images[prev_idx].height,//image의 위치
-			    	(slide.timeline[count2]*slide.W)+slide.W, 0, 1200, 857,//canvas의 위치
+			    	(this.timeline[count2]*this.W)+this.W, 0, this.W, this.H,//canvas의 위치
 			    );
 	    		break;
 	    	case 2:
-	    		this.ctx.moveTo(0, slide.S+500);
-			    this.ctx.lineTo(slide.W, slide.L+200);
-			    this.ctx.lineTo(slide.W, slide.H);
-			    this.ctx.lineTo(0, slide.H);
+	    		this.ctx.moveTo(0, this.H - this.S);
+			    this.ctx.lineTo(this.W, this.H - this.L);
+			    this.ctx.lineTo(this.W, this.H);
+			    this.ctx.lineTo(0, this.H);
 			    this.ctx.closePath();
 			    this.ctx.clip();
 			    this.ctx.drawImage(
 			    	this.images[this.idx], 
 			    	0, 0, this.images[this.idx].width, this.images[this.idx].height,//image의 위치
-			    	(slide.timeline[count3]*slide.W), 0, 1200, 857,//canvas의 위치
+			    	(this.timeline[count3]*this.W), 0, this.W, this.H,//canvas의 위치
 			    );
 			    this.ctx.drawImage(
 			    	this.images[prev_idx], 
 			    	0, 0, this.images[prev_idx].width, this.images[prev_idx].height,//image의 위치
-			    	(slide.timeline[count3]*slide.W)+slide.W, 0, 1200, 857,//canvas의 위치
+			    	(this.timeline[count3]*this.W)+this.W, 0, this.W, this.H,//canvas의 위치
+			    );
+	    		break;
+	    }
+	    
+	    this.ctx.restore();
+	}
+	var self= this;
+	if(count3<120){// 120번 돌아가면 2초고 딱 한바퀴 // 0 ~ 120 = 1slide
+		//slidetime=2000 == +1
+		// slidetime/1000
+		// plas_value= 
+		//slidetime=1000 == +2
+		setTimeout(function (){
+			self.PrevImage(
+				prev_idx, 
+				count1<120? count1 + self.plus_value: count1, 
+				count1>12&&count2<120? count2 + self.plus_value: count2, 
+				count1>24? count3 + self.plus_value: count3
+			);
+		}, 1000/this.FPS);//1초당 60번 돌아감
+	}else{
+		this.isAnimated= false;
+		this.idx= prev_idx;
+    	this.callback.onSlideChanged();//changed callback 
+	}
+}
+Slider.prototype.NextImage= function (next_idx, count1= 0, count2= 0, count3= 0){
+	for(var i=0; i<9; i++){// cliping, drawing
+		var j= i%3;
+		
+		this.ctx.save();
+	    this.ctx.beginPath();
+	    switch(j){
+	    	case 0:
+			    this.ctx.moveTo(0, 0);
+			    this.ctx.lineTo(this.W, 0);
+			    this.ctx.lineTo(this.W, this.S);
+			    this.ctx.lineTo(0, this.L);
+			    this.ctx.closePath();
+			    this.ctx.clip();
+			    this.ctx.drawImage(
+			    	this.images[this.idx], 
+			    	0, 0, this.images[this.idx].width, this.images[this.idx].height,//image의 위치
+			    	(this.timeline[count1]*this.W), 0, this.W, this.H,//canvas의 위치
+			    );
+			    this.ctx.drawImage(
+			    	this.images[next_idx], 
+			    	0, 0, this.images[next_idx].width, this.images[next_idx].height,//image의 위치
+			    	(this.timeline[count1]*this.W)+this.W, 0, this.W, this.H,//canvas의 위치
+			    );
+	    		break;
+	    	case 1:
+	    		this.ctx.moveTo(0, this.L);
+			    this.ctx.lineTo(this.W, this.S);
+			    this.ctx.lineTo(this.W, this.H - this.L);
+			    this.ctx.lineTo(0, this.H - this.S);
+			    this.ctx.closePath();
+			    this.ctx.clip();
+			    this.ctx.drawImage(
+			    	this.images[this.idx], 
+			    	0, 0, this.images[this.idx].width, this.images[this.idx].height,//image의 위치
+			    	(this.timeline[count2]*this.W), 0, this.W, this.H,//canvas의 위치
+			    );
+			    this.ctx.drawImage(
+			    	this.images[next_idx], 
+			    	0, 0, this.images[next_idx].width, this.images[next_idx].height,//image의 위치
+			    	(this.timeline[count2]*this.W)+this.W, 0, this.W, this.H,//canvas의 위치
+			    );
+	    		break;
+	    	case 2:
+	    		this.ctx.moveTo(0, this.H - this.S);
+			    this.ctx.lineTo(this.W, this.H - this.L);
+			    this.ctx.lineTo(this.W, this.H);
+			    this.ctx.lineTo(0, this.H);
+			    this.ctx.closePath();
+			    this.ctx.clip();
+			    this.ctx.drawImage(
+			    	this.images[this.idx], 
+			    	0, 0, this.images[this.idx].width, this.images[this.idx].height,//image의 위치
+			    	(this.timeline[count3]*this.W), 0, this.W, this.H,//canvas의 위치
+			    );
+			    this.ctx.drawImage(
+			    	this.images[next_idx], 
+			    	0, 0, this.images[next_idx].width, this.images[next_idx].height,//image의 위치
+			    	(this.timeline[count3]*this.W)+this.W, 0, this.W, this.H,//canvas의 위치
 			    );
 	    		break;
 	    }
@@ -587,420 +761,111 @@ Slider.prototype.PrevImage= function (prev_idx ,count1= 0, count2= 0, count3= 0)
 	if(count3<120){
 		setTimeout(function (){
 			self.PrevImage(
-				prev_idx, 
-				count1<120? ++count1: count1, 
-				count1>12&&count2<120? ++count2: count2, 
-				count1>24? ++count3: count3
+				next_idx, 
+				count1<120? count1 + self.plus_value: count1, 
+				count1>12&&count2<120? count2 + self.plus_value: count2, 
+				count1>24? count3 + self.plus_value: count3
 			);
 		}, 1000/this.FPS);
 	}else{
 		this.isAnimated= false;
-		this.idx= this.idx > 0 ? this.idx - 1 : this.len -1;
+		this.idx= next_idx;
+		this.callback.onSlideChanged();//changed callback 
 	}
-
-}
-Slider.prototype.NextImage= function (count1= 0, count2= 0, count3= 0){
-
-	console.log("next");
-	this.isAnimated= false;
 }
 Slider.prototype.MoveImage = function(tg, count1= 0, count2= 0, count3= 0) {
 	console.log(`${this.idx} ~ ${tg}`);
-	this.isAnimated= false;
+	if(this.idx==tg)
+		return this.isAnimated=false;
+	var back= this.idx>tg;// direction
+	for(var i=0; i<9; i++){// cliping, drawing
+		var j= i%3;
+		
+		this.ctx.save();
+	    this.ctx.beginPath();
+	    switch(j){
+	    	case 0:
+			    this.ctx.moveTo(0, 0);
+			    this.ctx.lineTo(this.W, 0);
+			    this.ctx.lineTo(this.W, this.S);
+			    this.ctx.lineTo(0, this.L);
+			    this.ctx.closePath();
+			    this.ctx.clip();
+			    var x= (this.timeline[count1]*this.W);
+			    this.ctx.drawImage(
+			    	this.images[this.idx], 
+			    	0, 0, this.images[this.idx].width, this.images[this.idx].height,//image의 위치
+			    	back? -x :x, 0, this.W, this.H,//canvas의 위치
+			    );
+			    this.ctx.drawImage(
+			    	this.images[tg], 
+			    	0, 0, this.images[tg].width, this.images[tg].height,//image의 위치
+			    	back? -x - this.W :x + this.W, 0, this.W, this.H,//canvas의 위치
+			    );
+
+	    		break;
+	    	case 1:
+	    		this.ctx.moveTo(0, this.L);
+			    this.ctx.lineTo(this.W, this.S);
+			    this.ctx.lineTo(this.W, this.H - this.L);
+			    this.ctx.lineTo(0, this.H - this.S);
+			    this.ctx.closePath();
+			    this.ctx.clip();
+			    var x= (this.timeline[count2]*this.W);
+			    this.ctx.drawImage(
+			    	this.images[this.idx], 
+			    	0, 0, this.images[this.idx].width, this.images[this.idx].height,//image의 위치
+			    	back? -x: x, 0, this.W, this.H,//canvas의 위치
+			    );
+			    this.ctx.drawImage(
+			    	this.images[tg], 
+			    	0, 0, this.images[tg].width, this.images[tg].height,//image의 위치
+			    	back? -x - this.W: x + this.W, 0, this.W, this.H,//canvas의 위치
+			    );
+	    		break;
+	    	case 2:
+	    		this.ctx.moveTo(0, this.H - this.S);
+			    this.ctx.lineTo(this.W, this.H - this.L);
+			    this.ctx.lineTo(this.W, this.H);
+			    this.ctx.lineTo(0, this.H);
+			    this.ctx.closePath();
+			    this.ctx.clip();
+			    var x= (this.timeline[count3]*this.W);
+			    this.ctx.drawImage(
+			    	this.images[this.idx], 
+			    	0, 0, this.images[this.idx].width, this.images[this.idx].height,//image의 위치
+			    	back? -x: x, 0, this.W, this.H,//canvas의 위치
+			    );
+			    this.ctx.drawImage(
+			    	this.images[tg], 
+			    	0, 0, this.images[tg].width, this.images[tg].height,//image의 위치
+			    	back? -x - this.W: x + this.W, 0, this.W, this.H,//canvas의 위치
+			    );
+	    		break;
+	    }
+	    this.ctx.restore();
+	}
+	var self= this;
+	if(count3<120){
+		setTimeout(function (){
+			self.MoveImage(
+				tg, 
+				count1<120? count1 + self.plus_value: count1, 
+				count1>12&&count2<120? count2 + self.plus_value: count2, 
+				count1>24? count3 + self.plus_value: count3
+			);
+		}, 1000/this.FPS);
+	}else{
+		this.isAnimated= false;
+		this.idx= tg;
+		this.callback.onSlideChanged();//changed callback 
+	}
 };
-Slider.prototype.thumbnail= function (){
+Slider.prototype.thumbnail= function (){//draw first image
+	console.log(this.ctx);
 	this.ctx.drawImage(
     	this.images[0], 
     	0, 0, this.images[0].width, this.images[0].height,//image의 위치
-    	// (this.timeline[0])/2800*this.W, 0, 1200, 857,//canvas의 위치 /2800*canvas.W= 2800단위로 쪼개진걸 1200단위로 만들려고
-    	this.timeline[0]*this.W, 0, 1200, 857,//canvas의 위치 /timeline을 이미 2800으로 나눠서 그냥 canvas.w곱해줌
+    	this.timeline[0]*this.W, 0, 1200, 857,
     );
-}
-
-function initSlider (){
-	var src= ["./images/index_1_180918.jpg", "./images/index_2_180918.jpg", "./images/index_3_180918.jpg", "./images/index_2_180918.jpg", "./images/index_1_180918.jpg"];//image src
-
-	var nb= 0;
-	var loaded= 0;
-	var imgs= [];
-	for(var i in src){
-		nb++;
-		imgs[i] = new Image();
-		imgs[i].src = src[i];
-		imgs[i].onload = function(){
-			if(++loaded == nb){//all images onload
-				slide.images=imgs;//images
-				slide.canvas= document.getElementById("canvas");//canvas
-				slide.ctx= slide.canvas.getContext("2d");//ctx
-				slide.W= slide.canvas.width;//canvas Width
-				slide.H= slide.canvas.height;//canvas Height
-				slide.len= src.length;//slide image length
-
-				slide.thumbnail();//show first image
-				for(i of slide.timeline){
-					console.log(i);
-				}
-				if(slide.Auto)//if option.auto== true
-					setInterval(function (){slide.nextImage()}, 3000);//autoslide
-			}
-		}
-	}
-}
-function initEvents (){
-	$(".btn-prev").on("click", function (){
-		if(slide.isAnimated)
-			return;
-		slide.isAnimated= true;
-		var prev_idx= slide.idx > 0 ? slide.idx - 1 : slide.len -1;
-		console.log(prev_idx);
-		slide.PrevImage(prev_idx, 0, 0, 0)
-	});
-	$(".btn-next").on("click", function (){
-		if(slide.isAnimated)
-			return;
-		slide.isAnimated= true;
-		var next_idx= slide.idx < slide.len-1 ? slide.idx + 1 : 0
-		slide.NextImage(next_idx)
-	});
-	$("nav.link-list>ul>li").on("click", function (){
-		if(slide.isAnimated)
-			return;
-		slide.isAnimated= true;
-		slide.MoveImage($(this).index());
-	});
-}
-// function hideItems (num, count1, count2, count3){
-// 	var num2 = num > 0 ? num - 1 : len - 1;
-
-// 	for(var i=0; i<9; i++){// cliping, drawing
-// 		var j= i%3;
-		
-// 		ctx.save();
-// 	    ctx.beginPath();
-// 	    switch(j){
-// 	    	case 0:
-// 			    ctx.moveTo(0, 0);
-// 			    ctx.lineTo(slide.W, 0);
-// 			    ctx.lineTo(slide.W, slide.S);
-// 			    ctx.lineTo(0, slide.L);
-// 			    ctx.closePath();
-// 			    ctx.clip();
-// 			    ctx.drawImage(
-// 			    	images[num], 
-// 			    	0, 0, images[num].width, images[num].height,//image의 위치
-// 			    	-((slide.timeline[count1]-5599.9)/2800*slide.W), 0, 1200, 857,//canvas의 위치
-// 			    );
-// 			    ctx.drawImage(
-// 			    	images[num2], 
-// 			    	0, 0, images[num2].width, images[num2].height,//image의 위치
-// 			    	-((slide.timeline[count1]-5599.9)/2800*slide.W)-1200, 0, 1200, 857,//canvas의 위치
-// 			    );
-// 	    		break;
-// 	    	case 1:
-// 	    		ctx.moveTo(0, slide.L);
-// 			    ctx.lineTo(slide.W, slide.S);
-// 			    ctx.lineTo(slide.W, slide.L+200);
-// 			    ctx.lineTo(0, slide.S+500);
-// 			    ctx.closePath();
-// 			    ctx.clip();
-// 			    ctx.drawImage(
-// 			    	images[num], 
-// 			    	0, 0, images[num].width, images[num].height,//image의 위치
-// 			    	-((slide.timeline[count2]-5599.9)/2800*slide.W), 0, 1200, 857,//canvas의 위치
-// 			    );
-// 			    ctx.drawImage(
-// 			    	images[num2], 
-// 			    	0, 0, images[num2].width, images[num2].height,//image의 위치
-// 			    	-((slide.timeline[count2]-5599.9)/2800*slide.W)-1200, 0, 1200, 857,//canvas의 위치
-// 			    );
-// 	    		break;
-// 	    	case 2:
-// 	    		ctx.moveTo(0, slide.S+500);
-// 			    ctx.lineTo(slide.W, slide.L+200);
-// 			    ctx.lineTo(slide.W, slide.H);
-// 			    ctx.lineTo(0, slide.H);
-// 			    ctx.closePath();
-// 			    ctx.clip();
-// 			    ctx.drawImage(
-// 			    	images[num], 
-// 			    	0, 0, images[num].width, images[num].height,//image의 위치
-// 			    	-((slide.timeline[count3]-5599.9)/2800*slide.W), 0, 1200, 857,//canvas의 위치
-// 			    );
-// 			    ctx.drawImage(
-// 			    	images[num2], 
-// 			    	0, 0, images[num2].width, images[num2].height,//image의 위치
-// 			    	-((slide.timeline[count3]-5599.9)/2800*slide.W)-1200, 0, 1200, 857,//canvas의 위치
-// 			    );
-// 	    		break;
-// 	    }
-	    
-// 	    ctx.restore();
-// 	}
-// 	if(count3<120){
-// 		setTimeout(function (){
-// 			hideItems(
-// 				num, 
-// 				count1<120? ++count1: count1, 
-// 				count1>12&&count2<120? ++count2: count2, 
-// 				count1>24? ++count3: count3
-// 			);
-// 		}, 1000/FPS);
-// 	}else{
-// 		isAnimated= false;
-// 	}
-// }
-// function prevItem() {
-// 	if(isAnimated)
-// 		return
-// 	isAnimated= true;
-//     hideItems(idx, 0, 0, 0);//1
-//     idx= idx > 0 ? idx - 1 : len -1
-// }
-
-function showItems (num, count1, count2, count3){
-	num2 = num < len -1 ? num + 1 : 0;
-	for(var i=0; i<9; i++){// cliping, drawing
-		var j= i%3;
-		
-		ctx.save();
-	    ctx.beginPath();
-	    switch(j){
-	    	case 0:
-			    ctx.moveTo(0, 0);
-			    ctx.lineTo(slide.W, 0);
-			    ctx.lineTo(slide.W, slide.S);
-			    ctx.lineTo(0, slide.L);
-			    ctx.closePath();
-			    ctx.clip();
-			    ctx.drawImage(
-			    	images[num], 
-			    	0, 0, images[num].width, images[num].height,//image의 위치
-			    	(slide.timeline[count1]-5599.9)/2800*slide.W, 0, 1200, 857,//canvas의 위치
-			    );
-			    ctx.drawImage(
-			    	images[num2], 
-			    	0, 0, images[num2].width, images[num2].height,//image의 위치
-			    	(slide.timeline[count1]-5599.9)/2800*slide.W+1200, 0, 1200, 857,//canvas의 위치
-			    );
-	    		break;
-	    	case 1:
-	    		ctx.moveTo(0, slide.L);
-			    ctx.lineTo(slide.W, slide.S);
-			    ctx.lineTo(slide.W, slide.L+200);
-			    ctx.lineTo(0, slide.S+500);
-			    ctx.closePath();
-			    ctx.clip();
-			    ctx.drawImage(
-			    	images[num], 
-			    	0, 0, images[num].width, images[num].height,//image의 위치
-			    	(slide.timeline[count2]-5599.9)/2800*slide.W, 0, 1200, 857,//canvas의 위치
-			    );
-			    ctx.drawImage(
-			    	images[num2], 
-			    	0, 0, images[num2].width, images[num2].height,//image의 위치
-			    	(slide.timeline[count2]-5599.9)/2800*slide.W+1200, 0, 1200, 857,//canvas의 위치
-			    );
-	    		break;
-	    	case 2:
-	    		ctx.moveTo(0, slide.S+500);
-			    ctx.lineTo(slide.W, slide.L+200);
-			    ctx.lineTo(slide.W, slide.H);
-			    ctx.lineTo(0, slide.H);
-			    ctx.closePath();
-			    ctx.clip();
-			    ctx.drawImage(
-			    	images[num], 
-			    	0, 0, images[num].width, images[num].height,//image의 위치
-			    	(slide.timeline[count3]-5599.9)/2800*slide.W, 0, 1200, 857,//canvas의 위치
-			    );
-			    ctx.drawImage(
-			    	images[num2], 
-			    	0, 0, images[num2].width, images[num2].height,//image의 위치
-			    	(slide.timeline[count3]-5599.9)/2800*slide.W+1200, 0, 1200, 857,//canvas의 위치
-			    );
-	    		break;
-	    }
-	    ctx.restore();
-	}
-	if(count3<120){
-		setTimeout(function (){
-			showItems(
-				num, 
-				count1<120? ++count1: count1, 
-				count1>12&&count2<120? ++count2: count2, 
-				count1>24? ++count3: count3
-			);
-		}, 1000/FPS);
-	}else{
-		isAnimated= false;
-	}
-}
-function nextItem() {
-	if(slide.isAnimated)
-		return
-	slide.isAnimated= true;
-    showItems(idx, 0, 0, 0);//1
-    idx= idx < len -1 ? idx + 1 : 0
-}
-
-function moveItem(r, count1= 0, count2= 0, count3= 0) {
-	if(idx==r)
-		return isAnimated=false;
-	var a= (idx>r);//false
-	for(var i=0; i<9; i++){// cliping, drawing
-		var j= i%3;
-		
-		ctx.save();
-	    ctx.beginPath();
-	    switch(j){
-	    	case 0:
-			    ctx.moveTo(0, 0);
-			    ctx.lineTo(slide.W, 0);
-			    ctx.lineTo(slide.W, slide.S);
-			    ctx.lineTo(0, slide.L);
-			    ctx.closePath();
-			    ctx.clip();
-			    var x= (slide.timeline[count1]-5599.9)/2800*slide.W;
-			    ctx.drawImage(
-			    	images[idx], 
-			    	0, 0, images[idx].width, images[idx].height,//image의 위치
-			    	a? -x :x, 0, 1200, 857,//canvas의 위치
-			    );
-			    ctx.drawImage(
-			    	images[r], 
-			    	0, 0, images[r].width, images[r].height,//image의 위치
-			    	a? -x-1200 :x+1200, 0, 1200, 857,//canvas의 위치
-			    );
-
-	    		break;
-	    	case 1:
-	    		ctx.moveTo(0, slide.L);
-			    ctx.lineTo(slide.W, slide.S);
-			    ctx.lineTo(slide.W, slide.L+200);
-			    ctx.lineTo(0, slide.S+500);
-			    ctx.closePath();
-			    ctx.clip();
-			    var x= (slide.timeline[count2]-5599.9)/2800*slide.W;
-			    ctx.drawImage(
-			    	images[idx], 
-			    	0, 0, images[idx].width, images[idx].height,//image의 위치
-			    	a? -x: x, 0, 1200, 857,//canvas의 위치
-			    );
-			    ctx.drawImage(
-			    	images[r], 
-			    	0, 0, images[r].width, images[r].height,//image의 위치
-			    	a? -x-1200: x+1200, 0, 1200, 857,//canvas의 위치
-			    );
-	    		break;
-	    	case 2:
-	    		ctx.moveTo(0, slide.S+500);
-			    ctx.lineTo(slide.W, slide.L+200);
-			    ctx.lineTo(slide.W, slide.H);
-			    ctx.lineTo(0, slide.H);
-			    ctx.closePath();
-			    ctx.clip();
-			    var x= (slide.timeline[count3]-5599.9)/2800*slide.W;
-			    ctx.drawImage(
-			    	images[idx], 
-			    	0, 0, images[idx].width, images[idx].height,//image의 위치
-			    	a? -x: x, 0, 1200, 857,//canvas의 위치
-			    );
-			    ctx.drawImage(
-			    	images[r], 
-			    	0, 0, images[r].width, images[r].height,//image의 위치
-			    	a? -x-1200: x+1200, 0, 1200, 857,//canvas의 위치
-			    );
-	    		break;
-	    }
-	    ctx.restore();
-	}
-	if(count3<120){
-		setTimeout(function (){
-			moveItem(
-				r, 
-				count1<120? ++count1: count1, 
-				count1>12&&count2<120? ++count2: count2, 
-				count1>24? ++count3: count3
-			);
-		}, 1000/FPS);
-	}else{
-		isAnimated= false;
-		idx= r;
-	}
-	// for(var i=0; i<9; i++){// cliping, drawing
-	// 	var j= i%3;
-		
-	// 	ctx.save();
-	//     ctx.beginPath();
-	//     switch(j){
-	//     	case 0:
-	// 		    ctx.moveTo(0, 0);
-	// 		    ctx.lineTo(slide.W, 0);
-	// 		    ctx.lineTo(slide.W, slide.S);
-	// 		    ctx.lineTo(0, slide.L);
-	// 		    ctx.closePath();
-	// 		    ctx.clip();
-	// 		    for(var i=idx; idx>r? i>=r: i<=r; idx>r? i--: i++){
-	// 		    	ctx.drawImage(
-	// 			    	images[i], 
-	// 			    	0, 0, images[i].width, images[i].height,//image의 위치
-	// 			    	(slide.timeline[count1]-5599.9)/2800*slide.W+(Math.abs(idx-i)*1200), 0, 1200, 857,//canvas의 위치
-	// 			    );
-	// 			}
-	//     		break;
-	//     	case 1:
-	//     		ctx.moveTo(0, slide.L);
-	// 		    ctx.lineTo(slide.W, slide.S);
-	// 		    ctx.lineTo(slide.W, slide.L+200);
-	// 		    ctx.lineTo(0, slide.S+500);
-	// 		    ctx.closePath();
-	// 		    ctx.clip();
-	// 		    for(var i=idx; idx>r? i>=r: i<=r; idx>r? i--: i++){
-	// 		    	ctx.drawImage(
-	// 			    	images[i], 
-	// 			    	0, 0, images[i].width, images[i].height,//image의 위치
-	// 			    	(slide.timeline[count2]-5599.9)/2800*slide.W+(Math.abs(idx-i)*1200), 0, 1200, 857,//canvas의 위치
-	// 			    );
-	// 			}
-	//     		break;
-	//     	case 2:
-	//     		ctx.moveTo(0, slide.S+500);
-	// 		    ctx.lineTo(slide.W, slide.L+200);
-	// 		    ctx.lineTo(slide.W, slide.H);
-	// 		    ctx.lineTo(0, slide.H);
-	// 		    ctx.closePath();
-	// 		    ctx.clip();
-	// 		    for(var i=idx; idx>r? i>=r: i<=r; idx>r? i--: i++){
-	// 		    	ctx.drawImage(
-	// 			    	images[i], 
-	// 			    	0, 0, images[i].width, images[i].height,//image의 위치
-	// 			    	(slide.timeline[count3]-5599.9)/2800*slide.W+(Math.abs(idx-i)*1200), 0, 1200, 857,//canvas의 위치
-	// 			    );
-	// 			}
-	//     		break;
-	//     }
-	//     ctx.restore();
-	// }
-	// if(count3<Math.abs(idx-r)*120){
-	// 	setTimeout(function (){
-	// 		moveItem(
-	// 			r, 
-	// 			count1<Math.abs(idx-r)*120? ++count1: count1, 
-	// 			count1>12&&count2<Math.abs(idx-r)*120? ++count2: count2, 
-	// 			count1>24? ++count3: count3
-	// 		);
-	// 	}, 1000/FPS);
-	// }else{
-	// 	isAnimated= false;
-	// }
-}
-window.onload= function (){
-	var canvas= document.getElementById("canvas");
-	var ctx= canvas.getContext("2d");
-	var isAnimated= false;
-
-	
-	
-    initSlider();
-    initEvents();
 }
