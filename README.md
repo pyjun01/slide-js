@@ -49,7 +49,10 @@ Include files:
 		  list: '.slide-list li',// wrap list
 		  viewClass : 'active'// focus class
 	  },
+<<<<<<< HEAD
 	  progress_bar:".slide-progress>.progress",//progressbar
+=======
+>>>>>>> 8bdc7fd70b68b378d0afc36e49e25a9ba10db651
 	  S: 200,// clip short
 	  L: 400,// clip long
   }, function (){//callback
