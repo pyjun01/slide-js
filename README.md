@@ -50,7 +50,6 @@ Include files:
 		  viewClass : 'active'// focus class
 	  },
 	  progress_bar:".slide-progress>.progress",//progressbar
-=======
 	  S: 200,// clip short
 	  L: 400,// clip long
   }, function (){//callback
