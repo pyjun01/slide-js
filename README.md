@@ -1,14 +1,14 @@
-# [Slider](https://github.com/pyjun01/Slider)
+# [slide](https://github.com/pyjun01/SlideJS)
 
 간단한 슬라이드 플러그인.
 
-- [Demo](https://pyjun01.github.io/SliderJS/)
+- [Demo](https://pyjun01.github.io/SlideJS/)
 
 ## Main
 
 ```
 js/
-└── slider.js     (16.6 KB)
+└── slide.js     (16.6 KB)
 ```
 
 
@@ -19,8 +19,8 @@ js/
 
 Two quick start options are available:
 
-- [Download the latest release](https://github.com/pyjun01/Slider/archive/master.zip).
-- Clone the repository: `git clone https://github.com/pyjun01/Slider.git`.
+- [Download the latest release](https://github.com/pyjun01/SlideJS/archive/master.zip).
+- Clone the repository: `git clone https://github.com/pyjun01/SlideJS.git`.
 
 
 ### Installation
@@ -28,7 +28,7 @@ Two quick start options are available:
 Include files:
 
 ```html
-<script src="/path/to/Slider.js"></script>
+<script src="/path/to/Slide.js"></script>
 ```
 
 
