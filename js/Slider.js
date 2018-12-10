@@ -578,8 +578,8 @@ Slider.prototype.MakingPageBtn = function (pageBtn){
 		var c= i==0? "class='"+ this.setSlides.viewClass +"'": "";
 		tags+= "<li "+c+">";
 		tags+= "<a href='#'>";
-		tags+= "0"; // 2018-11-26 추가
-		tags+= i+1;
+		// tags+= "0"; // 2018-11-26 추가
+		// tags+= i+1;
 		tags+= "</a>";
 		tags+= "</li>";
 	}
