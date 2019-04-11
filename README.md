@@ -52,9 +52,9 @@ Include files:
 	  progress_bar:".slide-progress>.progress",//progressbar
 	  S: 200,// clip short
 	  L: 400,// clip long
-  }, function (){//callback
-    onInit: function (){}// Slide Ready
-    onSlideStart: function (){}// Slide start
-    onSlideChanged: function (){}// Slide end
+  }, {//callback
+    onInit: function (){}, // Slide Ready
+    onSlideStart: function (){}, // Slide start
+    onSlideChanged: function (){}, // Slide end
   });
 ```
